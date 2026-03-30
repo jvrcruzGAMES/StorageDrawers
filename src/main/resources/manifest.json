@@ -1,0 +1,19 @@
+{
+  "Group": "com.blake21",
+  "Name": "StorageDrawers",
+  "Version": "1.0.1",
+  "Main": "com.blake21.storagedrawers.StorageDrawers",
+  "Description": "Storage Drawers mod.",
+  "Authors": [
+    {
+      "Name": "Blake21"
+    }
+  ],
+  "ServerVersion": "*",
+  "Dependencies": {},
+  "OptionalDependencies": {},
+  "LoadBefore": {},
+  "DisabledByDefault": false,
+  "IncludesAssetPack": true,
+  "SubPlugins": []
+}

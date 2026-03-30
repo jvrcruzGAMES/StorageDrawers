@@ -1,0 +1,33 @@
+storage_drawer.name = Darkwood Storage Drawer
+storage_drawer.description = A block for storing large quantities of a single item.
+
+blackwood_storage_drawer.name = Blackwood Storage Drawer
+blackwood_storage_drawer.description = A block for storing large quantities of a single item.
+
+deadwood_storage_drawer.name = Deadwood Storage Drawer
+deadwood_storage_drawer.description = A block for storing large quantities of a single item.
+
+drywood_storage_drawer.name = Drywood Storage Drawer
+drywood_storage_drawer.description = A block for storing large quantities of a single item.
+
+goldenwood_storage_drawer.name = Goldenwood Storage Drawer
+goldenwood_storage_drawer.description = A block for storing large quantities of a single item.
+
+hardwood_storage_drawer.name = Hardwood Storage Drawer
+hardwood_storage_drawer.description = A block for storing large quantities of a single item.
+
+lightwood_storage_drawer.name = Lightwood Storage Drawer
+lightwood_storage_drawer.description = A block for storing large quantities of a single item.
+
+redwood_storage_drawer.name = Redwood Storage Drawer
+redwood_storage_drawer.description = A block for storing large quantities of a single item.
+
+softwood_02_storage_drawer.name = Softwood Storage Drawer
+softwood_02_storage_drawer.description = A block for storing large quantities of a single item.
+
+softwood_03_storage_drawer.name = Softwood Storage Drawer (Variant)
+softwood_03_storage_drawer.description = A block for storing large quantities of a single item.
+
+tropicalwood_storage_drawer.name = Tropicalwood Storage Drawer
+tropicalwood_storage_drawer.description = A block for storing large quantities of a single item.
+

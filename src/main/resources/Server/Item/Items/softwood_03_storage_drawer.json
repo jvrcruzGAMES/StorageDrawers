@@ -1,0 +1,105 @@
+{
+    "PlayerAnimationsId": "Block",
+    "Categories": [
+        "Furniture.Furniture"
+    ],
+    "Recipe": {
+        "TimeSeconds": 1,
+        "Input": [
+            {
+                "ItemId": "Ingredient_Stick",
+                "Quantity": 2
+            },
+            {
+                "ResourceTypeId": "Wood_Softwood_Trunk",
+                "Quantity": 4
+            }
+        ],
+        "OutputQuantity": 1,
+        "BenchRequirement": [
+            {
+                "Type": "Crafting",
+                "Id": "Workbench",
+                "Categories": [
+                    "Workbench_Survival"
+                ]
+            }
+        ]
+    },
+    "BlockType": {
+        "ItemId": "StorageDrawers:softwood_03_storage_drawer",
+        "State": {
+            "Id": "container",
+            "Capacity": 1
+        },
+        "BlockEntity": {
+            "Components": {
+                "container": {},
+                "StorageDrawers:DrawerComponent": {}
+            }
+        },
+        "Supporting": {
+            "Up": [
+                {
+                    "FaceType": "Full"
+                }
+            ],
+            "Down": [
+                {
+                    "FaceType": "Full"
+                }
+            ],
+            "North": [
+                {
+                    "FaceType": "Full"
+                }
+            ],
+            "South": [
+                {
+                    "FaceType": "Full"
+                }
+            ],
+            "East": [
+                {
+                    "FaceType": "Full"
+                }
+            ],
+            "West": [
+                {
+                    "FaceType": "Full"
+                }
+            ]
+        },
+        "BlockSoundSetId": "Wood",
+        "CustomModel": "Blocks/Drawers/Models/Storage_Drawer.blockymodel",
+        "CustomModelTexture": [
+            {
+                "Texture": "BlockTextures/Drawers/Wood_Softwood_Planks_03.png",
+                "Weight": 0
+            }
+        ],
+        "DrawType": "Model",
+        "Flags": {
+            "IsUsable": true
+        },
+        "Interactions": {
+            "Primary": "DrawerInteraction",
+            "Use": "DrawerInteraction"
+        },
+        "Material": "Solid",
+        "Opacity": "Semitransparent",
+        "CustomModelScale": 1.0,
+        "VariantRotation": "NESW",
+        "Gathering": {
+            "Soft": {
+                "IsWeaponBreakable": true
+            },
+            "UseDefaultDropWhenPlaced": false
+        }
+    },
+    "TranslationProperties": {
+        "Name": "items.softwood_03_storage_drawer.name",
+        "Description": "items.storage_drawer.description"
+    },
+    "Icon": "Icons/ItemsGenerated/Softwood_Alternative.png"
+}
