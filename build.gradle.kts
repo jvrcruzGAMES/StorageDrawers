@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.blake21.storagedrawers"
-version = "1.0.1-SNAPSHOT-PATCHED"
+version = "1.0.2-UNOFFICIAL"
 
 repositories {
     mavenCentral()

@@ -3,6 +3,8 @@ package com.blake21.storagedrawers.core.render;
 import com.blake21.storagedrawers.core.component.DrawerComponent;
 import com.blake21.storagedrawers.core.config.DebugConfig;
 import com.hypixel.hytale.component.AddReason;
+import com.hypixel.hytale.component.Component;
+import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
@@ -42,18 +44,25 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 public class DrawerRenderer {
    public static void updateDrawerDisplay(World world, Ref<ChunkStore> drawerRef, DrawerComponent state) {
       world.execute(() -> {
+         if (drawerRef == null || !drawerRef.isValid()) {
+            return;
+         }
+
          Store<EntityStore> entityStore = world.getEntityStore().getStore();
          Ref<EntityStore> displayRef = state.getDisplayEntity();
          ItemStack stack = state.getStoredItem();
          if (stack != null && state.getQuantity() > 0) {
             Ref<EntityStore> textRef = state.getTextDisplayEntity();
             if (textRef != null && textRef.isValid()) {
-               entityStore.removeEntity(textRef, RemoveReason.REMOVE);
+               safeRemoveEntity(entityStore, textRef);
                state.setTextDisplayEntity((Ref)null);
             }
 
             if (displayRef != null && displayRef.isValid()) {
-               updateExistingItemDisplay(world, drawerRef, entityStore, displayRef, state);
+               if (!updateExistingItemDisplay(world, drawerRef, entityStore, displayRef, state)) {
+                  state.setDisplayEntity((Ref)null);
+                  spawnNewItemDisplay(world, drawerRef, state);
+               }
             } else {
                spawnNewItemDisplay(world, drawerRef, state);
             }
@@ -64,7 +73,7 @@ public class DrawerRenderer {
       });
    }
 
-   private static void spawnNewItemDisplay(World world, Ref<ChunkStore> drawerRef, DrawerComponent state) {
+   private static boolean spawnNewItemDisplay(World world, Ref<ChunkStore> drawerRef, DrawerComponent state) {
       Store<EntityStore> entityStore = world.getEntityStore().getStore();
       ItemStack stack = state.getStoredItem();
       if (stack != null && !stack.isEmpty()) {
@@ -72,6 +81,10 @@ public class DrawerRenderer {
          stack.setOverrideDroppedItemAnimation(true);
          Model model = resolveModel(stack);
          Vector3d pos = calculateDisplayPosition(world, drawerRef, 0.2D, 0.52D);
+         if (pos == null) {
+            return false;
+         }
+
          Vector3f rot = calculateDisplayRotation(world, drawerRef);
          Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
          holder.addComponent(Nameplate.getComponentType(), new Nameplate(String.valueOf(state.getQuantity())));
@@ -100,70 +113,89 @@ public class DrawerRenderer {
          holder.ensureComponent(PreventPickup.getComponentType());
          holder.ensureComponent(PreventItemMerging.getComponentType());
          Ref<EntityStore> newRef = entityStore.addEntity(holder, AddReason.SPAWN);
-         state.setDisplayEntity(newRef);
+         if (newRef != null && newRef.isValid()) {
+            state.setDisplayEntity(newRef);
+            return true;
+         }
       }
+
+      return false;
    }
 
-   private static void updateExistingItemDisplay(World world, Ref<ChunkStore> drawerRef, Store<EntityStore> entityStore, Ref<EntityStore> displayRef, DrawerComponent state) {
-      TransformComponent trans = (TransformComponent)entityStore.getComponent(displayRef, TransformComponent.getComponentType());
-      if (trans != null) {
-         trans.setPosition(calculateDisplayPosition(world, drawerRef, 0.2D, 0.52D));
-         trans.setRotation(calculateDisplayRotation(world, drawerRef));
+   private static boolean updateExistingItemDisplay(World world, Ref<ChunkStore> drawerRef, Store<EntityStore> entityStore, Ref<EntityStore> displayRef, DrawerComponent state) {
+      if (displayRef == null || !displayRef.isValid()) {
+         return false;
       }
 
-      Nameplate nameplate = (Nameplate)entityStore.getComponent(displayRef, Nameplate.getComponentType());
-      if (nameplate != null) {
-         nameplate.setText(String.valueOf(state.getQuantity()));
-      } else {
-         entityStore.putComponent(displayRef, Nameplate.getComponentType(), new Nameplate(String.valueOf(state.getQuantity())));
+      Vector3d pos = calculateDisplayPosition(world, drawerRef, 0.2D, 0.52D);
+      if (pos == null) {
+         return false;
       }
 
-      entityStore.tryRemoveComponent(displayRef, Velocity.getComponentType());
-      entityStore.tryRemoveComponent(displayRef, PhysicsValues.getComponentType());
-      entityStore.tryRemoveComponent(displayRef, BoundingBox.getComponentType());
-      entityStore.ensureComponent(displayRef, Frozen.getComponentType());
-      entityStore.ensureComponent(displayRef, Intangible.getComponentType());
-      entityStore.ensureComponent(displayRef, PreventPickup.getComponentType());
-      entityStore.ensureComponent(displayRef, PreventItemMerging.getComponentType());
-      ItemStack stack = state.getStoredItem();
-      if (stack != null && !stack.isEmpty()) {
-         Model model = resolveModel(stack);
-         Item itemAsset = stack.getItem();
-         float itemScale = itemAsset != null ? itemAsset.getScale() : 1.0F;
-         float targetScale = 0.5F;
-         float dynamicScale = targetScale / itemScale;
-         dynamicScale = Math.max(0.25F, Math.min(dynamicScale, 0.7F));
-         if (model != null) {
-            ModelReference ref = new ModelReference(model.getModelAssetId(), model.getScale(), model.getRandomAttachmentIds(), true);
-            entityStore.tryRemoveComponent(displayRef, ItemComponent.getComponentType());
-            entityStore.tryRemoveComponent(displayRef, ModelComponent.getComponentType());
-            entityStore.putComponent(displayRef, PersistentModel.getComponentType(), new PersistentModel(ref));
+      try {
+         TransformComponent trans = getComponentSafely(entityStore, displayRef, TransformComponent.getComponentType());
+         if (trans != null) {
+            trans.setPosition(pos);
+            trans.setRotation(calculateDisplayRotation(world, drawerRef));
+         }
+
+         Nameplate nameplate = getComponentSafely(entityStore, displayRef, Nameplate.getComponentType());
+         if (nameplate != null) {
+            nameplate.setText(String.valueOf(state.getQuantity()));
          } else {
-            entityStore.tryRemoveComponent(displayRef, PersistentModel.getComponentType());
-            entityStore.tryRemoveComponent(displayRef, ModelComponent.getComponentType());
-            ItemComponent itemComp = (ItemComponent)entityStore.getComponent(displayRef, ItemComponent.getComponentType());
-            if (itemComp != null) {
-               if (!itemComp.getItemStack().getItemId().equals(stack.getItemId())) {
-                  itemComp.setItemStack(stack.withQuantity(1));
-               }
+            entityStore.putComponent(displayRef, Nameplate.getComponentType(), new Nameplate(String.valueOf(state.getQuantity())));
+         }
+
+         entityStore.tryRemoveComponent(displayRef, Velocity.getComponentType());
+         entityStore.tryRemoveComponent(displayRef, PhysicsValues.getComponentType());
+         entityStore.tryRemoveComponent(displayRef, BoundingBox.getComponentType());
+         entityStore.ensureComponent(displayRef, Frozen.getComponentType());
+         entityStore.ensureComponent(displayRef, Intangible.getComponentType());
+         entityStore.ensureComponent(displayRef, PreventPickup.getComponentType());
+         entityStore.ensureComponent(displayRef, PreventItemMerging.getComponentType());
+         ItemStack stack = state.getStoredItem();
+         if (stack != null && !stack.isEmpty()) {
+            Model model = resolveModel(stack);
+            Item itemAsset = stack.getItem();
+            float itemScale = itemAsset != null ? itemAsset.getScale() : 1.0F;
+            float targetScale = 0.5F;
+            float dynamicScale = targetScale / itemScale;
+            dynamicScale = Math.max(0.25F, Math.min(dynamicScale, 0.7F));
+            if (model != null) {
+               ModelReference ref = new ModelReference(model.getModelAssetId(), model.getScale(), model.getRandomAttachmentIds(), true);
+               entityStore.tryRemoveComponent(displayRef, ItemComponent.getComponentType());
+               entityStore.tryRemoveComponent(displayRef, ModelComponent.getComponentType());
+               entityStore.putComponent(displayRef, PersistentModel.getComponentType(), new PersistentModel(ref));
             } else {
-               itemComp = new ItemComponent(stack.withQuantity(1));
-               entityStore.putComponent(displayRef, ItemComponent.getComponentType(), itemComp);
+               entityStore.tryRemoveComponent(displayRef, PersistentModel.getComponentType());
+               entityStore.tryRemoveComponent(displayRef, ModelComponent.getComponentType());
+               ItemComponent itemComp = getComponentSafely(entityStore, displayRef, ItemComponent.getComponentType());
+               if (itemComp != null) {
+                  if (!itemComp.getItemStack().getItemId().equals(stack.getItemId())) {
+                     itemComp.setItemStack(stack.withQuantity(1));
+                  }
+               } else {
+                  itemComp = new ItemComponent(stack.withQuantity(1));
+                  entityStore.putComponent(displayRef, ItemComponent.getComponentType(), itemComp);
+               }
+
+               itemComp.setPickupDelay(Float.MAX_VALUE);
+               itemComp.setRemovedByPlayerPickup(false);
+               itemComp.getItemStack().setOverrideDroppedItemAnimation(true);
             }
 
-            itemComp.setPickupDelay(Float.MAX_VALUE);
-            itemComp.setRemovedByPlayerPickup(false);
-            itemComp.getItemStack().setOverrideDroppedItemAnimation(true);
+            EntityScaleComponent scaleComp = getComponentSafely(entityStore, displayRef, EntityScaleComponent.getComponentType());
+            if (scaleComp != null) {
+               scaleComp.setScale(dynamicScale);
+            } else {
+               entityStore.putComponent(displayRef, EntityScaleComponent.getComponentType(), new EntityScaleComponent(dynamicScale));
+            }
          }
-
-         EntityScaleComponent scaleComp = (EntityScaleComponent)entityStore.getComponent(displayRef, EntityScaleComponent.getComponentType());
-         if (scaleComp != null) {
-            scaleComp.setScale(dynamicScale);
-         } else {
-            entityStore.putComponent(displayRef, EntityScaleComponent.getComponentType(), new EntityScaleComponent(dynamicScale));
-         }
-
+      } catch (IllegalStateException var11) {
+         return false;
       }
+
+      return true;
    }
 
    public static void clearDisplay(World world, DrawerComponent state) {
@@ -174,11 +206,11 @@ public class DrawerRenderer {
       world.execute(() -> {
          Store<EntityStore> store = world.getEntityStore().getStore();
          if (displayRef != null && displayRef.isValid()) {
-            store.removeEntity(displayRef, RemoveReason.REMOVE);
+            safeRemoveEntity(store, displayRef);
          }
 
          if (textRef != null && textRef.isValid()) {
-            store.removeEntity(textRef, RemoveReason.REMOVE);
+            safeRemoveEntity(store, textRef);
          }
 
       });
@@ -279,11 +311,11 @@ public class DrawerRenderer {
 
    private static Vector3f calculateDisplayRotation(World world, Ref<ChunkStore> drawerRef) {
       Store<ChunkStore> store = world.getChunkStore().getStore();
-      BlockStateInfo blockInfo = (BlockStateInfo)store.getComponent(drawerRef, BlockStateInfo.getComponentType());
+      BlockStateInfo blockInfo = getComponentSafely(store, drawerRef, BlockStateInfo.getComponentType());
       if (blockInfo == null) {
          return Vector3f.ZERO;
       } else {
-         WorldChunk chunk = (WorldChunk)store.getComponent(blockInfo.getChunkRef(), WorldChunk.getComponentType());
+         WorldChunk chunk = getComponentSafely(store, blockInfo.getChunkRef(), WorldChunk.getComponentType());
          if (chunk == null) {
             return Vector3f.ZERO;
          } else {
@@ -298,14 +330,18 @@ public class DrawerRenderer {
    }
 
    private static Vector3d calculateDisplayPosition(World world, Ref<ChunkStore> drawerRef, double yTarget, double forwardOffset) {
+      if (drawerRef == null || !drawerRef.isValid()) {
+         return null;
+      }
+
       Store<ChunkStore> store = world.getChunkStore().getStore();
-      BlockStateInfo blockInfo = (BlockStateInfo)store.getComponent(drawerRef, BlockStateInfo.getComponentType());
+      BlockStateInfo blockInfo = getComponentSafely(store, drawerRef, BlockStateInfo.getComponentType());
       if (blockInfo == null) {
-         return new Vector3d(0.0D, 0.0D, 0.0D);
+         return null;
       } else {
-         WorldChunk chunk = (WorldChunk)store.getComponent(blockInfo.getChunkRef(), WorldChunk.getComponentType());
+         WorldChunk chunk = getComponentSafely(store, blockInfo.getChunkRef(), WorldChunk.getComponentType());
          if (chunk == null) {
-            return new Vector3d(0.0D, 0.0D, 0.0D);
+            return null;
          } else {
             int blockIndex = blockInfo.getIndex();
             int x = ChunkUtil.xFromBlockInColumn(blockIndex);
@@ -333,6 +369,29 @@ public class DrawerRenderer {
 
             return pos;
          }
+      }
+   }
+
+   private static <S, C extends Component<S>> C getComponentSafely(Store<S> store, Ref<S> ref, ComponentType<S, C> componentType) {
+      if (store == null || ref == null || !ref.isValid()) {
+         return null;
+      }
+
+      try {
+         return store.getComponent(ref, componentType);
+      } catch (IllegalStateException var4) {
+         return null;
+      }
+   }
+
+   private static void safeRemoveEntity(Store<EntityStore> store, Ref<EntityStore> entityRef) {
+      if (store == null || entityRef == null || !entityRef.isValid()) {
+         return;
+      }
+
+      try {
+         store.removeEntity(entityRef, RemoveReason.REMOVE);
+      } catch (IllegalStateException var3) {
       }
    }
 }
